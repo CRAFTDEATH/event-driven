@@ -1,6 +1,6 @@
 <template>
   <div>
-    {{orderStatus}}
+    {{ orderStatus }}
     <p>teste</p>
   </div>
 </template>
@@ -12,36 +12,39 @@ export default {
   },
   data() {
     return {
-      orderStatus: this.order
+      orderStatus: this.order,
+      token: null
     }
-
   },
-  methods: {
+  async mounted() {
+    const id = 24;
 
-  },
-  mounted() {
-    setInterval(async () => {
-      let id = 24;
+    try {
+      // Faz login uma vez e pega token
+      const res = await axios.post('http://localhost:8030/api/login', {
+        email: 'adriano.rufino@hotmail.com',
+        password: 'password'
+      });
+      this.token = res.data.token;
 
-      try {
-        const res = await axios.post('http://localhost:8030/api/login', {
-          email: 'adriano.rufino@hotmail.com',
-          password: 'password'
-        });
+      // Cria a conexão SSE, passando token via query string
+      const source = new EventSource(
+        `http://localhost:8030/api/v1/orders/${id}/events/stream?token=${this.token}`
+      );
 
-        const token = res.data.token;
+      // Atualiza status toda vez que o servidor enviar evento
+      source.onmessage = (event) => {
+        this.orderStatus = JSON.parse(event.data);
+      };
 
-        const res2 = await axios.get(`http://localhost:8030/api/v1/orders/${id}/events`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        this.orderStatus = res2.data;
-      } catch (e) {
-        console.log(e)
-        // Silently ignore for now; could log or surface an error
-      }
-    }, 60000); // 1 hora
+      source.onerror = (err) => {
+        console.error('SSE error', err);
+        source.close();
+      };
+
+    } catch (e) {
+      console.error('Erro ao logar ou abrir SSE', e);
+    }
   }
 }
 </script>
