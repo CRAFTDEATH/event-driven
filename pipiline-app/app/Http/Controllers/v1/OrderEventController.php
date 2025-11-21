@@ -19,8 +19,10 @@ class OrderEventController extends Controller
 
         return response()->json([], 201);
     }
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        // If the request reached here it means the sanctum middleware authenticated the user.
+        // Return the events for the order.
         $orderEvent = OrderEvent::where('order_id', $id)->get();
         return response()->json($orderEvent, 200);
     }
