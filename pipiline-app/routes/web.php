@@ -1,12 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OrderController;
 use Inertia\Inertia;
+
 Route::get('/', function () {
-    return view('welcome');
+    return Inertia::render('Home');
 });
 
-Route::get('/orders/{id}', function ($id) {
-    $order = \App\Models\OrderEvent::where('order_id',$id)->get();
-    return Inertia::render('Show', ['order' => $order]);
-});
+// Orders UI (handled by controller using Inertia)
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+Route::post('/orders/search', [OrderController::class, 'search'])->name('orders.search');
+Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');

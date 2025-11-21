@@ -1,10 +1,7 @@
 <?php
 
-use App\Models\OrderEvent;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use Laravel\Sanctum\PersonalAccessToken;
 use App\Http\Controllers\v1\AuthController;
 use App\Http\Controllers\v1\OrderEventController;
 
