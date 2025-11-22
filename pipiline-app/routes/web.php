@@ -11,4 +11,4 @@ Route::get('/', function () {
 // Orders UI (handled by controller using Inertia)
 Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 Route::post('/orders/search', [OrderController::class, 'search'])->name('orders.search');
-Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+Route::get('/orders/{codigo}', [OrderController::class, 'show'])->name('orders.show');

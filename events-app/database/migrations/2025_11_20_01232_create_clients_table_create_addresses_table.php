@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_events', function (Blueprint $table) {
+        Schema::create('addresses', function (Blueprint $table) {
             $table->id();
-            $table->string('status');
-            $table->dateTime('date');
-            $table->foreignId('order_id')
-                ->constrained('orders')
-                ->cascadeOnDelete();
+            $table->string('neighborhood');
+            $table->string('street');
+            $table->string('number');
+            $table->string('city');
+            $table->string('state');
+            $table->string('zipcode');
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_events');
+        Schema::dropIfExists('addresses');
     }
 };

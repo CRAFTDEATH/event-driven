@@ -22,9 +22,27 @@ class OrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product'=>'string',
-            'amount'=> 'numeric',
-            'price' => 'numeric'
+            // product is an array of items
+            'product' => 'required|array',
+            'product.*.name' => 'required|string',
+            'product.*.quantity' => 'required|numeric',
+            'product.*.price' => 'required|numeric',
+
+            // client is an object
+            'client' => 'required|array',
+            'client.name' => 'required|string',
+            'client.cpf' => 'required|string',
+            'client.email' => 'required|string',
+            'client.phone' => 'required|string',
+
+            // address inside client
+            'client.address' => 'required|array',
+            'client.address.neighborhood' => 'required|string',
+            'client.address.street' => 'required|string',
+            'client.address.number' => 'required|string',
+            'client.address.city' => 'required|string',
+            'client.address.state' => 'required|string',
+            'client.address.zipcode' => 'required|string',
         ];
     }
 }

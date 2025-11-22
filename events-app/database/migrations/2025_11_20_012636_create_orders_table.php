@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->string('product');
-            $table->integer('amount');
-            $table->decimal('price', 10, 2);
+            $table->string('codigo');
+            $table->foreignId('client_id')
+                ->constrained('clients')
+                ->cascadeOnDelete();
             $table->timestamps();
         });
     }
-
     /**
      * Reverse the migrations.
      */

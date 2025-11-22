@@ -30,8 +30,8 @@
 
               <form @submit.prevent="submit" class="mt-4">
                 <div class="mb-3">
-                  <label class="form-label">Número do pedido</label>
-                  <input v-model="orderId" type="text" class="form-control form-control-lg" placeholder="Ex: 12345" required />
+                  <label class="form-label">Código do pedido</label>
+                  <input v-model="codigo" type="text" class="form-control form-control-lg" placeholder="Ex: GELGCJ7IUE" required />
                 </div>
                 <div class="d-flex justify-content-end">
                   <button class="btn btn-primary btn-lg" :class="{ 'disabled': loading }" :disabled="loading">
@@ -52,13 +52,13 @@
 import { ref } from 'vue'
 import { Inertia } from '@inertiajs/inertia'
 
-const orderId = ref('')
+const codigo = ref('')
 const loading = ref(false)
 
 function submit() {
-  if (!orderId.value) return
+  if (!codigo.value) return
   loading.value = true
-  Inertia.post('/orders/search', { order_id: orderId.value })
+  Inertia.post('/orders/search', { codigo: codigo.value })
 }
 </script>
 
