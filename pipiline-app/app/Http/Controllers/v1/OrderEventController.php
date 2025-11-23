@@ -13,7 +13,7 @@ class OrderEventController extends Controller
     {
         $validated = $request->validate([
             'payload' => 'array',
-            'order_id' => 'numeric'
+            'codigo' => 'string'
         ]);
         OrderEvent::create($validated);
 
@@ -21,9 +21,11 @@ class OrderEventController extends Controller
     }
     public function show(Request $request, $id)
     {
-        // If the request reached here it means the sanctum middleware authenticated the user.
-        // Return the events for the order.
-        $orderEvent = OrderEvent::where('order_id', $id)->get();
+        $codigo = $id;
+        $orderEvent = OrderEvent::where('codigo', $codigo)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
         return response()->json($orderEvent, 200);
     }
 }

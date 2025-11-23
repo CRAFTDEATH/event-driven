@@ -33,6 +33,7 @@ class OrderController extends Controller
                 'neighborhood' => $validated['client']['address']['neighborhood'],
                 'street'       => $validated['client']['address']['street'],
                 'number'       => $validated['client']['address']['number'],
+                'complement'   => $validated['client']['address']['complement'] ?? null,
                 'city'         => $validated['client']['address']['city'],
                 'state'        => $validated['client']['address']['state'],
                 'zipcode'      => $validated['client']['address']['zipcode'],
@@ -92,6 +93,125 @@ class OrderController extends Controller
             return response()->json([
                 'message' => 'Ocorreu um erro na criação do pedido, tente novamente mais tarde.'
             ], 500);
+        }
+    }
+    
+    public function index(Request $request)
+    {
+        $perPage = (int) $request->get('per_page', 10);
+        $name = $request->get('name');
+        $codigo = $request->get('codigo');
+        $status = $request->get('status');
+
+        $query = Order::query()
+            ->select(['orders.*', DB::raw('(select status from order_events where order_events.order_id = orders.id order by date desc limit 1) as current_status')])
+            ->with('client')
+            ->orderBy('id', 'desc');
+
+        if ($name) {
+            $query->whereHas('client', function ($q) use ($name) {
+                $q->where('name', 'like', "%{$name}%");
+            });
+        }
+
+        if ($codigo) {
+            $query->where('codigo', 'like', "%{$codigo}%");
+        }
+
+        if ($status) {
+            // filter by latest status using the same subquery used in select
+            $query->whereRaw("(select status from order_events where order_events.order_id = orders.id order by date desc limit 1) = ?", [$status]);
+        }
+
+        $orders = $query->paginate($perPage);
+
+        // Append query params for pagination links
+        $orders->appends($request->all());
+
+        return response()->json($orders);
+    }
+    public function show(Request $request, $orderId)
+    {
+        $order = Order::with(['client.address', 'products', 'events'])->find($orderId);
+        if (!$order) {
+            return response()->json(['message' => 'Pedido não encontrado'], 404);
+        }
+
+        // Attach latest status for convenience
+        $latest = $order->events()->orderBy('date', 'desc')->first();
+        $order->current_status = $latest?->status;
+
+        return response()->json($order);
+    }
+
+    public function updateDetails(Request $request, $orderId)
+    {
+        $order = Order::with(['client.address', 'products'])->find($orderId);
+        if (!$order) {
+            return response()->json(['message' => 'Pedido não encontrado'], 404);
+        }
+
+        $validated = $request->validate([
+            'client.name' => 'required|string|max:255',
+            'client.cpf' => 'nullable|string|max:32',
+            'client.email' => 'nullable|email',
+            'client.phone' => 'nullable|string|max:64',
+            'client.address.street' => 'nullable|string|max:255',
+            'client.address.number' => 'nullable|string|max:50',
+            'client.address.complement' => 'nullable|string|max:255',
+            'client.address.neighborhood' => 'nullable|string|max:255',
+            'client.address.city' => 'nullable|string|max:255',
+            'client.address.state' => 'nullable|string|max:8',
+            'client.address.zipcode' => 'nullable|string|max:20',
+            'product' => 'nullable|array',
+            'product.*.name' => 'required_with:product|string|max:255',
+            'product.*.quantity' => 'required_with:product|integer|min:1',
+            'product.*.price' => 'required_with:product|numeric|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // update client
+            $c = $order->client;
+            if ($c) {
+                $c->update([
+                    'name' => $validated['client']['name'],
+                    'cpf' => $validated['client']['cpf'] ?? $c->cpf,
+                    'email' => $validated['client']['email'] ?? $c->email,
+                    'phone' => $validated['client']['phone'] ?? $c->phone,
+                ]);
+
+                // update address
+                $addrData = $validated['client']['address'] ?? [];
+                if ($c->address) {
+                    $c->address->update(array_merge($c->address->toArray(), $addrData));
+                } else {
+                    $addr = Address::create($addrData + ['zipcode' => $addrData['zipcode'] ?? null]);
+                    $c->address_id = $addr->id;
+                    $c->save();
+                }
+            }
+
+            // replace products if provided
+            if (isset($validated['product']) && is_array($validated['product'])) {
+                // remove existing
+                Product::where('order_id', $order->id)->delete();
+                foreach ($validated['product'] as $item) {
+                    Product::create([
+                        'order_id' => $order->id,
+                        'name' => $item['name'],
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return response()->json(['message' => 'Pedido atualizado com sucesso']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao atualizar pedido', ['exception' => $e->getMessage(), 'order' => $orderId]);
+            return response()->json(['message' => 'Erro ao atualizar pedido'], 500);
         }
     }
     public function update(Request $request, $orderId)

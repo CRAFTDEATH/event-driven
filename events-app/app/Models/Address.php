@@ -10,6 +10,7 @@ class Address extends Model
         'neighborhood',
         'street',
         'number',
+        'complement',
         'city',
         'state',
         'zipcode',

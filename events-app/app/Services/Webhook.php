@@ -31,7 +31,7 @@ class Webhook
             // Payload enviado ao outro sistema
             $payload = [
                 'payload'  =>  $this->buildPayload($orderEvent),
-                'order_id' => $orderEvent->order_id
+                'codigo'=> $orderEvent->order->codigo,
             ];
 
             // Enviar webhook

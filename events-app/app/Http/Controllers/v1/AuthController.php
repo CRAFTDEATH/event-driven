@@ -27,4 +27,22 @@ class AuthController extends Controller
             'token' => $token
         ]);
     }
+
+    public function logout(Request $request)
+    {
+        $user = $request->user();
+        if ($user) {
+            // If using Sanctum/personal access tokens, revoke the current access token
+            try {
+                $current = $request->user()->currentAccessToken();
+                if ($current) {
+                    $current->delete();
+                }
+            } catch (\Throwable $e) {
+                // ignore if method not available or other issues
+            }
+        }
+
+        return response()->json(['message' => 'Logged out']);
+    }
 }

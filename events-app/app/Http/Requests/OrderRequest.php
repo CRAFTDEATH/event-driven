@@ -40,6 +40,7 @@ class OrderRequest extends FormRequest
             'client.address.neighborhood' => 'required|string',
             'client.address.street' => 'required|string',
             'client.address.number' => 'required|string',
+            'client.address.complement' => 'nullable|string',
             'client.address.city' => 'required|string',
             'client.address.state' => 'required|string',
             'client.address.zipcode' => 'required|string',

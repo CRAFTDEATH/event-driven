@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_events', function (Blueprint $table) {
-            $table->id();
-            $table->string('codigo');
-            $table->json('payload');
-            $table->timestamps();
+        Schema::table('addresses', function (Blueprint $table) {
+            $table->string('complement')->nullable()->after('number');
         });
     }
 
@@ -24,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_events');
+        Schema::table('addresses', function (Blueprint $table) {
+            $table->dropColumn('complement');
+        });
     }
 };

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class OrderEvent extends Model
 {
     protected $fillable = [
-        'order_id',
+        'codigo',
         'payload',
     ];
     protected $casts = [

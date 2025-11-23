@@ -16,7 +16,6 @@
       </div>
       <div>
         <button class="btn btn-light btn-sm me-2" @click="refresh">Refresh</button>
-        <a :href="'/orders/' + (orderCode || '')" class="btn btn-outline-light btn-sm">Open Page</a>
       </div>
     </header>
   
@@ -39,7 +38,7 @@
         <div class="card-body d-flex justify-content-between align-items-center">
           <div>
             <p class="mb-1"><strong>Código:</strong> {{ orderCode || '—' }}</p>
-            <p class="text-muted small mb-0">Showing <strong>{{ events.length }}</strong> event(s)</p>
+            <p class="text-muted small mb-0">Showing <strong>{{ displayedEvents.length }}</strong> event(s)</p>
           </div>
           <div class="text-end">
             <small class="text-muted">Updated: {{ lastUpdated }}</small>
@@ -48,8 +47,8 @@
       </div>
   
       <div class="mt-3">
-        <div v-if="events.length === 0" class="alert alert-info">No events found for this order.</div>
-  
+        <div v-if="displayedEvents.length === 0" class="alert alert-info">No events found for this order.</div>
+
         <div v-else class="table-responsive shadow-sm rounded events-table mt-4 py-3">
           <table class="table table-striped table-hover mb-0 align-middle">
             <thead class="table-primary text-dark">
@@ -61,7 +60,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(ev, idx) in events" :key="ev.id || idx">
+              <tr v-for="(ev, idx) in displayedEvents" :key="ev.id || idx">
                 <th scope="row">{{ ev.id ?? idx + 1 }}</th>
                 <td class="align-middle">{{ getOrderCode(ev) }}</td>
                 <td class="align-middle">{{ formatDate(ev.created_at) }}</td>
@@ -128,9 +127,38 @@ const orderId = computed(() => {
   return null
 })
 
+// We will display only events that match the searched order code (if present),
+// or fall back to using events filtered by order_id.
+const searchedCode = computed(() => orderCode.value ? String(orderCode.value).trim() : null)
+
+const displayedEvents = computed(() => {
+  // If the server provided `props.events`, treat that as the definitive list to render
+  if (Array.isArray(props.events) && props.events.length) return events.value
+
+  if (!events.value || events.value.length === 0) return []
+
+  // If we have a searched code (string), prefer to show only events whose payload/code matches it
+  if (searchedCode.value) {
+    return events.value.filter(ev => {
+      try {
+        const code = getOrderCode(ev)
+        if (!code) return false
+        return String(code).trim().toLowerCase() === searchedCode.value.toLowerCase()
+      } catch (e) { return false }
+    })
+  }
+
+  // Otherwise, show events that belong to the inferred order_id
+  if (orderId.value) {
+    return events.value.filter(ev => ev.order_id && String(ev.order_id) === String(orderId.value))
+  }
+
+  return events.value
+})
+
 const lastUpdated = computed(() => {
-  if (!events.value || events.value.length === 0) return '—'
-  const dates = events.value.map(e => e.created_at).filter(Boolean).map(d => new Date(d))
+  if (!displayedEvents.value || displayedEvents.value.length === 0) return '—'
+  const dates = displayedEvents.value.map(e => e.created_at).filter(Boolean).map(d => new Date(d))
   if (!dates.length) return '—'
   const latest = new Date(Math.max.apply(null, dates))
   return latest.toLocaleString()
@@ -273,7 +301,9 @@ function formatDate(dt) {
 }
 
 async function refresh() {
-  const id = orderId.value || (events.value.length ? events.value[0].order_id : null)
+  // Prefer to refresh by codigo (string) when available so the controller returns
+  // only events matching that code; fall back to numeric orderId when not available.
+  const id = orderCode.value || orderId.value || (events.value.length ? events.value[0].order_id : null)
   if (!id) return
 
   try {

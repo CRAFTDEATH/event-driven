@@ -58,7 +58,10 @@ const loading = ref(false)
 function submit() {
   if (!codigo.value) return
   loading.value = true
-  Inertia.post('/orders/search', { codigo: codigo.value })
+  // Navigate directly to the show URL. The show page will display events or a "not found" notice.
+  // This avoids cases where the server returns an Inertia JSON payload but the client
+  // doesn't perform the swap (missing JS bundle or runtime errors). Direct visit always navigates.
+  Inertia.visit(`/orders/${encodeURIComponent(codigo.value)}`)
 }
 </script>
 

@@ -22,15 +22,18 @@ class OrderController
 
         $codigo = $validated['codigo'];
 
-        // Try to find an OrderEvent that contains the codigo in common payload shapes
-        $event = OrderEvent::where('payload->order->codigo', $codigo)
-            ->orWhere('payload->codigo', $codigo)
-            ->orWhere('payload->order->code', $codigo)
-            ->first();
+        $codigo = trim($codigo);
 
-        // If found, redirect to the order's show page using the codigo in the URL
-        if ($event) {
-            return redirect()->route('orders.show', ['codigo' => $codigo]);
+        // Prefer searching by the dedicated `codigo` column on OrderEvent
+        $events = OrderEvent::where('codigo', $codigo)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($events->isNotEmpty()) {
+            return Inertia::render('Orders/Show', [
+                'order' => ['order' => ['codigo' => $codigo]],
+                'events' => $events->toArray(),
+            ]);
         }
 
         // As a fallback, if codigo looks numeric, try redirecting using it as codigo
@@ -44,19 +47,26 @@ class OrderController
 
     public function show(Request $request, $codigo)
     {
-        // Find an event that matches the codigo in common payload locations
-        $match = OrderEvent::where('payload->order->codigo', $codigo)
-            ->orWhere('payload->codigo', $codigo)
-            ->orWhere('payload->order->code', $codigo)
-            ->first();
+        $codigo = trim($codigo);
 
-        if ($match) {
-            // Load all events for the corresponding order_id
-            $events = OrderEvent::where('order_id', $match->order_id)->orderBy('created_at', 'asc')->get();
-            return Inertia::render('Orders/Show', ['order' => ['order' => ['codigo' => $codigo], 'order_event' => $events->first()], 'events' => $events]);
+        // Prefer the dedicated `codigo` column on OrderEvent
+        $events = OrderEvent::where('codigo', $codigo)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // Fallback: some older events might have the code inside the payload
+        if ($events->isEmpty()) {
+            $events = OrderEvent::where('payload->order->codigo', $codigo)
+                ->orWhere('payload->codigo', $codigo)
+                ->orWhere('payload->order->code', $codigo)
+                ->orderBy('created_at', 'asc')
+                ->get();
         }
 
-        // If nothing matched, return the Orders/Show page with empty events (frontend will show a notice)
-        return Inertia::render('Orders/Show', ['order' => null, 'events' => []]);
+        // Always render the Orders/Show page and pass the events collection (may be empty)
+        return Inertia::render('Orders/Show', [
+            'order' => ['order' => ['codigo' => $codigo]],
+            'events' => $events->toArray(),
+        ]);
     }
 }
